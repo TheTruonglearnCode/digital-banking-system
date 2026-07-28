@@ -131,3 +131,33 @@ Digital Banking System là hệ thống ngân hàng số cho phép khách hàng 
 - Cập nhật số dư phải dùng optimistic locking (`@Version`) để tránh mất dữ liệu khi có nhiều giao dịch đồng thời trên cùng 1 tài khoản
 
 ---
+
+
+## 5. Transaction Service
+
+### 5.1 Chức năng
+
+| Method | Endpoint | Mô tả | Actor |
+|---|---|---|---|
+| POST | `/transactions/transfer/internal` | Chuyển tiền giữa 2 tài khoản trong cùng hệ thống | CUSTOMER |
+| POST | `/transactions/transfer/external` | Chuyển tiền ra ngân hàng khác | CUSTOMER |
+| GET | `/transactions/me` | Xem lịch sử giao dịch của mình | CUSTOMER |
+| GET | `/transactions/{id}` | Xem chi tiết 1 giao dịch | CUSTOMER (liên quan), ADMIN |
+| POST | `/transactions/{id}/otp/verify` | Xác thực OTP cho giao dịch lớn | CUSTOMER |
+
+### 5.2 Business rule
+- Không được chuyển tiền vượt quá số dư khả dụng (`available balance = balance - số tiền đang giữ tạm cho giao dịch pending khác`)
+- Giao dịch trên **10.000.000 VNĐ** bắt buộc xác thực OTP gửi qua email/SMS trước khi thực hiện
+- Trạng thái giao dịch: `PENDING → PROCESSING → SUCCESS / FAILED`
+- Nếu giao dịch thất bại giữa chừng (ví dụ lỗi khi cộng tiền cho tài khoản nhận), **toàn bộ phải rollback**, tài khoản gửi không bị trừ tiền
+- Mỗi request chuyển tiền phải kèm `Idempotency-Key` — nếu client gửi lại cùng key trong vòng 24h, hệ thống trả về kết quả giao dịch cũ, **không xử lý lại lần 2**
+- Mọi giao dịch (thành công hay thất bại) đều phải ghi vào `audit_logs`, không được xóa lịch sử giao dịch dưới bất kỳ hình thức nào
+
+### 5.3 Non-functional requirement
+- Giao dịch phải đảm bảo tính **ACID** — dùng `@Transactional` đúng propagation, kiểm thử kỹ trường hợp rollback
+- Xử lý race condition khi 2 giao dịch cùng lúc thao tác trên 1 tài khoản (pessimistic lock hoặc optimistic lock + retry)
+- Thời gian xử lý 1 giao dịch nội bộ (internal transfer) phải dưới 2 giây trong điều kiện bình thường
+
+---
+
+
