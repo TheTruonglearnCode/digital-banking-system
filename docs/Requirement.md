@@ -195,3 +195,9 @@ Digital Banking System là hệ thống ngân hàng số cho phép khách hàng 
 
 ---
 
+## 8. Ngoài phạm vi (Out of scope)
+
+Tích hợp cổng thanh toán thật (Visa/Mastercard) — chỉ mô phỏng
+Xác thực sinh trắc học (vân tay/khuôn mặt)
+Ứng dụng mobile — chỉ xây dựng backend, test qua Postman/Swagger
+Đa ngôn ngữ (i18n) cho thông báo
