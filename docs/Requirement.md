@@ -78,3 +78,26 @@ Digital Banking System là hệ thống ngân hàng số cho phép khách hàng 
 
 ---
 
+## 3. User Service
+
+### 3.1 Chức năng
+
+| Method | Endpoint | Mô tả | Actor |
+|---|---|---|---|
+| GET | `/users/me` | Xem thông tin cá nhân | CUSTOMER |
+| PUT | `/users/me` | Cập nhật thông tin cá nhân | CUSTOMER |
+| POST | `/users/me/avatar` | Upload ảnh đại diện | CUSTOMER |
+| PUT | `/users/me/change-password` | Đổi mật khẩu (yêu cầu mật khẩu cũ) | CUSTOMER |
+| GET | `/users/{id}` | Xem thông tin user bất kỳ | ADMIN |
+| PUT | `/users/{id}/role` | Gán quyền cho user | ADMIN |
+| PUT | `/users/{id}/status` | Khóa/mở khóa tài khoản người dùng | ADMIN |
+
+### 3.2 Business rule
+- Số điện thoại, CMND/CCCD không được sửa sau khi đã xác thực KYC (Know Your Customer) — chỉ ADMIN mới sửa được, và phải ghi audit log
+- Avatar giới hạn 2MB, định dạng jpg/png
+- Đổi mật khẩu bắt buộc phải nhập đúng mật khẩu cũ, và sau khi đổi thành công, **thu hồi toàn bộ refresh token hiện có** (buộc đăng nhập lại trên mọi thiết bị)
+- Chỉ ADMIN mới được xem thông tin của user khác
+
+### 3.3 Non-functional requirement
+- Thông tin cá nhân (CMND/CCCD, số điện thoại) cần được mã hóa khi lưu trong database (encryption at rest)
+
