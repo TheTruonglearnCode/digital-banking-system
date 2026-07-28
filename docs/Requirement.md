@@ -161,3 +161,23 @@ Digital Banking System là hệ thống ngân hàng số cho phép khách hàng 
 ---
 
 
+## 6. Notification Service
+
+### 6.1 Chức năng
+
+| Sự kiện lắng nghe (Kafka topic) | Hành động |
+|---|---|
+| `transfer.success` | Gửi email + push notification xác nhận giao dịch thành công |
+| `transfer.failed` | Gửi email thông báo giao dịch thất bại, kèm lý do |
+| `otp.requested` | Gửi mã OTP qua email/SMS |
+| `account.locked` | Gửi email cảnh báo tài khoản bị khóa |
+
+### 6.2 Business rule
+- OTP có hiệu lực **5 phút**, tối đa 3 lần nhập sai trước khi bị vô hiệu hóa và phải yêu cầu OTP mới
+- Nếu gửi email thất bại (SMTP lỗi), message phải được đẩy vào Dead Letter Topic để xử lý lại sau, không được để mất thông báo giao dịch thành công/thất bại
+
+### 6.3 Non-functional requirement
+- Notification Service không được làm chậm luồng giao dịch chính — giao tiếp với Transaction Service **hoàn toàn bất đồng bộ qua Kafka**, không gọi đồng bộ (REST) trong luồng transfer
+
+---
+
