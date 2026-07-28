@@ -181,3 +181,17 @@ Digital Banking System là hệ thống ngân hàng số cho phép khách hàng 
 
 ---
 
+
+## 7. Non-functional requirement chung toàn hệ thống
+
+| Hạng mục | Yêu cầu |
+|---|---|
+| Bảo mật | Toàn bộ API (trừ register/login) yêu cầu JWT hợp lệ; dữ liệu nhạy cảm mã hóa at-rest |
+| Hiệu năng | API đọc (GET) phản hồi < 300ms trong điều kiện bình thường (có cache) |
+| Khả năng mở rộng | Mỗi service scale độc lập, stateless (session lưu ở Redis, không lưu ở memory service) |
+| Độ tin cậy | Không được mất giao dịch/thông báo dù service phụ (Notification) bị down tạm thời |
+| Khả năng audit | Mọi thao tác on tiền, khóa/mở tài khoản, đổi quyền đều ghi log không thể sửa/xóa |
+| Khả năng quan sát | Mỗi service expose `/actuator/health` và metrics cho Prometheus |
+
+---
+
