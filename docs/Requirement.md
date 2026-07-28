@@ -100,4 +100,34 @@ Digital Banking System là hệ thống ngân hàng số cho phép khách hàng 
 
 ### 3.3 Non-functional requirement
 - Thông tin cá nhân (CMND/CCCD, số điện thoại) cần được mã hóa khi lưu trong database (encryption at rest)
+# Requirement — Digital Banking System
 
+---
+
+## 4. Account Service
+
+### 4.1 Chức năng
+
+| Method | Endpoint | Mô tả | Actor |
+|---|---|---|---|
+| POST | `/accounts` | Mở tài khoản ngân hàng mới | CUSTOMER |
+| GET | `/accounts/me` | Xem danh sách tài khoản của mình | CUSTOMER |
+| GET | `/accounts/{accountNumber}` | Xem chi tiết 1 tài khoản | CUSTOMER (chủ tài khoản), ADMIN |
+| GET | `/accounts/{accountNumber}/balance` | Xem số dư | CUSTOMER (chủ tài khoản) |
+| PUT | `/accounts/{accountNumber}/lock` | Khóa tài khoản | ADMIN |
+| PUT | `/accounts/{accountNumber}/unlock` | Mở khóa tài khoản | ADMIN |
+| PUT | `/accounts/{accountNumber}/close` | Đóng tài khoản | CUSTOMER, ADMIN |
+
+### 4.2 Business rule
+- Số tài khoản (`accountNumber`) sinh tự động, duy nhất, không cho client tự đặt
+- Trạng thái tài khoản: `PENDING → ACTIVE → LOCKED / CLOSED`
+    - Chỉ được chuyển `LOCKED → ACTIVE`, không được chuyển ngược từ `CLOSED`
+- Tài khoản `LOCKED` hoặc `CLOSED`: từ chối mọi giao dịch chuyển/nhận tiền
+- Đóng tài khoản chỉ được phép khi số dư = 0
+- **Không có API nào cho phép client set trực tiếp số dư** — số dư chỉ được thay đổi thông qua Transaction Service (internal call), Account Service chỉ đọc và validate
+
+### 4.3 Non-functional requirement
+- Trường `balance` dùng kiểu `DECIMAL(19,4)` trong database, dùng `BigDecimal` trong code — tuyệt đối không dùng `double`/`float`
+- Cập nhật số dư phải dùng optimistic locking (`@Version`) để tránh mất dữ liệu khi có nhiều giao dịch đồng thời trên cùng 1 tài khoản
+
+---
