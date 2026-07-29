@@ -169,3 +169,14 @@ users 1───* notifications
 
 ---
 
+# Checklist
+
+- [x] Chuẩn hóa dữ liệu
+- [x] Có Audit Log
+- [x] Có Refresh Token
+- [x] Có Optimistic Lock
+- [x] Có Idempotency
+- [x] Có RBAC
+- [x] Có CreatedAt
+- [x] Có UpdatedAt
+- [x] Có Index
