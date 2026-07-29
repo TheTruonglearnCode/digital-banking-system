@@ -77,6 +77,17 @@ Table transactions {
   completed_at timestamp
 }
 
+Table outbox_events {
+  id bigint [pk, increment]
+  aggregate_type varchar [not null, note: 'vd: TRANSACTION']
+  aggregate_id varchar [not null, note: 'id cua transaction lien quan']
+  event_type varchar [not null, note: 'transfer.success / transfer.failed']
+  payload jsonb [not null]
+  published boolean [default: false]
+  created_at timestamp [not null]
+  published_at timestamp
+}
+
 Table notifications {
   id bigint [pk, increment]
   user_id bigint [ref: > users.id, note: 'logical ref - khac service']

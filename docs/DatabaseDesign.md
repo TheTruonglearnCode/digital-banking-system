@@ -9,7 +9,7 @@ Mỗi service quản lý dữ liệu của riêng mình, tránh phụ thuộc tr
 Database được thiết kế theo chuẩn chuẩn hóa dữ liệu (3NF), đảm bảo tính toàn vẹn, bảo mật và khả năng mở rộng.
 
 | Bảng             | Mục đích                   |
-| ---------------- | -------------------------- |
+| ---------------- |----------------------------|
 | users            | Người dùng                 |
 | roles            | Vai trò                    |
 | permissions      | Quyền                      |
@@ -18,6 +18,7 @@ Database được thiết kế theo chuẩn chuẩn hóa dữ liệu (3NF), đ�
 | refresh_tokens   | Refresh Token              |
 | accounts         | Tài khoản ngân hàng        |
 | transactions     | Giao dịch                  |
+| outbox_events    | Hộp thư giao dịch          |
 | notifications    | Thông báo                  |
 | audit_logs       | Nhật ký hệ thống           |
 
@@ -124,7 +125,22 @@ Index: `user_id`, `account_number` (unique).
 
 Index: `(from_account_number, created_at)`, `(to_account_number, created_at)` — phục vụ query lịch sử giao dịch nhanh; `idempotency_key` unique để DB tự chặn insert trùng.
 
-### 1.9 `notifications` (Notification Service)
+### 1.9 `outbox_events` (Transaction Service — Transactional Outbox Pattern)
+
+| Cột | Kiểu | Ràng buộc | Ghi chú |
+|---|---|---|---|
+| `id` | `BIGINT` | PK | |
+| `aggregate_type` | `VARCHAR(50)` | NOT NULL | ví dụ `TRANSACTION` |
+| `aggregate_id` | `VARCHAR(50)` | NOT NULL | id của transaction liên quan |
+| `event_type` | `VARCHAR(50)` | NOT NULL | `transfer.success`, `transfer.failed` |
+| `payload` | `JSONB` | NOT NULL | dữ liệu event, publish nguyên vẹn lên Kafka |
+| `published` | `BOOLEAN` | DEFAULT false | Outbox Publisher đánh dấu true sau khi publish thành công |
+| `created_at` | `TIMESTAMP` | NOT NULL | |
+| `published_at` | `TIMESTAMP` | NULLABLE | |
+
+> Bảng này nằm **cùng schema với `transactions`**, để việc ghi `transactions` (status SUCCESS/FAILED) và ghi `outbox_events` xảy ra trong **cùng 1 `@Transactional`** — đây chính là điều kiện tiên quyết để Transactional Outbox Pattern hoạt động đúng. Outbox Publisher (1 scheduled job hoặc Debezium CDC nếu muốn nâng cao) đọc các dòng `published = false`, publish lên Kafka, rồi cập nhật `published = true`.
+
+### 1.10 `notifications` (Notification Service)
 
 | Cột | Kiểu | Ràng buộc | Ghi chú |
 |---|---|---|---|
@@ -137,7 +153,7 @@ Index: `(from_account_number, created_at)`, `(to_account_number, created_at)` �
 | `retry_count` | `INT` | DEFAULT 0 | |
 | `created_at` | `TIMESTAMP` | NOT NULL | |
 
-### 1.10 `audit_logs` (dùng chung, ghi từ mọi service qua Kafka event hoặc gọi trực tiếp)
+### 1.11 `audit_logs` (dùng chung, ghi từ mọi service qua Kafka event hoặc gọi trực tiếp)
 
 | Cột | Kiểu | Ràng buộc | Ghi chú |
 |---|---|---|---|
@@ -169,14 +185,12 @@ users 1───* notifications
 
 ---
 
-# Checklist
+## 3. Checklist trước khi coi ERD "xong"
 
-- [x] Chuẩn hóa dữ liệu
-- [x] Có Audit Log
-- [x] Có Refresh Token
-- [x] Có Optimistic Lock
-- [x] Có Idempotency
-- [x] Có RBAC
-- [x] Có CreatedAt
-- [x] Có UpdatedAt
-- [x] Có Index
+- [ ] Mọi bảng có `created_at` (và `updated_at` nếu có thể bị sửa)
+- [ ] Không có FK vật lý xuyên service (chỉ FK trong cùng 1 service/schema)
+- [ ] Trường tiền tệ dùng `DECIMAL(19,4)`, không dùng `FLOAT`/`DOUBLE`
+- [ ] Có index cho các cột hay dùng để query (`account_number`, `user_id`, `created_at` trong transactions)
+- [ ] Có `version` column ở `accounts` cho optimistic lock
+- [ ] Có `idempotency_key` unique ở `transactions`
+- [ ] Export ảnh từ dbdiagram.io → lưu vào `docs/ERD.png`
