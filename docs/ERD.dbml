@@ -1,0 +1,100 @@
+Table users {
+  id bigint [pk, increment]
+  email varchar [unique, not null]
+  phone_number varchar [unique, not null]
+  password_hash varchar [not null]
+  full_name varchar [not null]
+  avatar_url varchar
+  email_verified boolean [default: false]
+  status varchar [not null]
+  failed_login_attempts int [default: 0]
+  locked_until timestamp
+  created_at timestamp [not null]
+  updated_at timestamp [not null]
+}
+
+Table roles {
+  id bigint [pk, increment]
+  name varchar [unique, not null]
+}
+
+Table permissions {
+  id bigint [pk, increment]
+  name varchar [unique, not null]
+}
+
+Table user_roles {
+  user_id bigint [ref: > users.id]
+  role_id bigint [ref: > roles.id]
+  Indexes {
+    (user_id, role_id) [pk]
+  }
+}
+
+Table role_permissions {
+  role_id bigint [ref: > roles.id]
+  permission_id bigint [ref: > permissions.id]
+  Indexes {
+    (role_id, permission_id) [pk]
+  }
+}
+
+Table refresh_tokens {
+  id bigint [pk, increment]
+  user_id bigint [ref: > users.id, not null]
+  token varchar [unique, not null]
+  expires_at timestamp [not null]
+  revoked boolean [default: false]
+  device_info varchar
+  created_at timestamp [not null]
+}
+
+Table accounts {
+  id bigint [pk, increment]
+  account_number varchar [unique, not null]
+  user_id bigint [ref: > users.id, note: 'logical ref - khong phai FK that trong DB, khac service']
+  balance decimal [not null, default: 0]
+  currency varchar [default: 'VND']
+  status varchar [not null]
+  version int [default: 0]
+  created_at timestamp [not null]
+  updated_at timestamp [not null]
+}
+
+Table transactions {
+  id bigint [pk, increment]
+  transaction_ref varchar [unique, not null]
+  idempotency_key varchar [unique, not null]
+  from_account_number varchar [ref: > accounts.account_number, note: 'logical ref - khac service']
+  to_account_number varchar [ref: > accounts.account_number, note: 'logical ref - khac service']
+  amount decimal [not null]
+  type varchar [not null]
+  status varchar [not null]
+  failure_reason varchar
+  otp_required boolean [default: false]
+  otp_verified boolean [default: false]
+  created_at timestamp [not null]
+  completed_at timestamp
+}
+
+Table notifications {
+  id bigint [pk, increment]
+  user_id bigint [ref: > users.id, note: 'logical ref - khac service']
+  type varchar [not null]
+  channel_event varchar [not null]
+  content text [not null]
+  status varchar [not null]
+  retry_count int [default: 0]
+  created_at timestamp [not null]
+}
+
+Table audit_logs {
+  id bigint [pk, increment]
+  actor_id bigint [ref: > users.id, note: 'logical ref - khac service, khong cascade delete']
+  actor_type varchar [not null]
+  action varchar [not null]
+  target_type varchar
+  target_id varchar
+  metadata jsonb
+  created_at timestamp [not null]
+}
