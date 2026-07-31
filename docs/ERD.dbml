@@ -11,6 +11,7 @@ Table users {
   locked_until timestamp
   created_at timestamp [not null]
   updated_at timestamp [not null]
+  role_id bigint [ref: > roles.id, not null]
 }
 
 Table roles {
@@ -23,13 +24,6 @@ Table permissions {
   name varchar [unique, not null]
 }
 
-Table user_roles {
-  user_id bigint [ref: > users.id]
-  role_id bigint [ref: > roles.id]
-  Indexes {
-    (user_id, role_id) [pk]
-  }
-}
 
 Table role_permissions {
   role_id bigint [ref: > roles.id]
