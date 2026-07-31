@@ -13,7 +13,6 @@ Database được thiết kế theo chuẩn chuẩn hóa dữ liệu (3NF), đ�
 | users            | Người dùng                 |
 | roles            | Vai trò                    |
 | permissions      | Quyền                      |
-| user_roles       | Liên kết User - Role       |
 | role_permissions | Liên kết Role - Permission |
 | refresh_tokens   | Refresh Token              |
 | accounts         | Tài khoản ngân hàng        |
@@ -22,26 +21,26 @@ Database được thiết kế theo chuẩn chuẩn hóa dữ liệu (3NF), đ�
 | notifications    | Thông báo                  |
 | audit_logs       | Nhật ký hệ thống           |
 
-# Database Design — Digital Banking System
 
 ## 1. Danh sách bảng chi tiết
 
 ### 1.1 `users` (Auth Service / User Service)
 
-| Cột | Kiểu | Ràng buộc | Ghi chú |
-|---|---|---|---|
-| `id` | `BIGINT` | PK, auto increment | |
-| `email` | `VARCHAR(255)` | UNIQUE, NOT NULL | |
-| `phone_number` | `VARCHAR(20)` | UNIQUE, NOT NULL | |
-| `password_hash` | `VARCHAR(255)` | NOT NULL | BCrypt hash, không lưu plaintext |
-| `full_name` | `VARCHAR(255)` | NOT NULL | |
-| `avatar_url` | `VARCHAR(500)` | NULLABLE | |
-| `email_verified` | `BOOLEAN` | DEFAULT false | |
-| `status` | `VARCHAR(20)` | NOT NULL | `PENDING / ACTIVE / LOCKED` |
-| `failed_login_attempts` | `INT` | DEFAULT 0 | phục vụ rule khóa sau 5 lần sai |
-| `locked_until` | `TIMESTAMP` | NULLABLE | |
-| `created_at` | `TIMESTAMP` | NOT NULL | |
-| `updated_at` | `TIMESTAMP` | NOT NULL | |
+| Cột                     | Kiểu           | Ràng buộc                | Ghi chú |
+|-------------------------|----------------|--------------------------|---|
+| `id`                    | `BIGINT`       | PK, auto increment       | |
+| `email`                 | `VARCHAR(255)` | UNIQUE, NOT NULL         | |
+| `phone_number`          | `VARCHAR(20)`  | UNIQUE, NOT NULL         | |
+| `password_hash`         | `VARCHAR(255)` | NOT NULL                 | BCrypt hash, không lưu plaintext |
+| `full_name`             | `VARCHAR(255)` | NOT NULL                 | |
+| `avatar_url`            | `VARCHAR(500)` | NULLABLE                 | |
+| `email_verified`        | `BOOLEAN`      | DEFAULT false            | |
+| `status`                | `VARCHAR(20)`  | NOT NULL                 | `PENDING / ACTIVE / LOCKED` |
+| `failed_login_attempts` | `INT`          | DEFAULT 0                | phục vụ rule khóa sau 5 lần sai |
+| `locked_until`          | `TIMESTAMP`    | NULLABLE                 | |
+| `created_at`            | `TIMESTAMP`    | NOT NULL                 | |
+| `updated_at`            | `TIMESTAMP`    | NOT NULL                 | |
+| `role_id`               | `BIGINT`       | FK -> roles.id, NOT NULL | |
 
 ### 1.2 `roles`
 
@@ -57,15 +56,8 @@ Database được thiết kế theo chuẩn chuẩn hóa dữ liệu (3NF), đ�
 | `id` | `BIGINT` | PK |
 | `name` | `VARCHAR(100)` | UNIQUE — ví dụ `ACCOUNT_LOCK`, `USER_VIEW_ALL` |
 
-### 1.4 `user_roles` (bảng trung gian, many-to-many)
 
-| Cột | Kiểu | Ràng buộc |
-|---|---|---|
-| `user_id` | `BIGINT` | FK → `users.id` |
-| `role_id` | `BIGINT` | FK → `roles.id` |
-| | | PK composite (`user_id`, `role_id`) |
-
-### 1.5 `role_permissions` (bảng trung gian)
+### 1.4 `role_permissions` (bảng trung gian)
 
 | Cột | Kiểu | Ràng buộc |
 |---|---|---|
@@ -73,9 +65,10 @@ Database được thiết kế theo chuẩn chuẩn hóa dữ liệu (3NF), đ�
 | `permission_id` | `BIGINT` | FK → `permissions.id` |
 | | | PK composite |
 
-> Dùng RBAC 2 cấp (role → permission) thay vì gán permission trực tiếp cho user — chuẩn hơn, dễ mở rộng, và là điểm cộng khi phỏng vấn hỏi về authorization design.
+> User được gán trực tiếp một Role duy nhất thông qua cột role_id. 
+> Role tiếp tục được gán nhiều Permission.
 
-### 1.6 `refresh_tokens`
+### 1.5 `refresh_tokens`
 
 | Cột | Kiểu | Ràng buộc | Ghi chú |
 |---|---|---|---|
@@ -89,7 +82,7 @@ Database được thiết kế theo chuẩn chuẩn hóa dữ liệu (3NF), đ�
 
 Index: `(user_id, revoked)` — truy vấn nhanh danh sách token còn hiệu lực của 1 user.
 
-### 1.7 `accounts` (Account Service)
+### 1.6 `accounts` (Account Service)
 
 | Cột | Kiểu | Ràng buộc | Ghi chú |
 |---|---|---|---|
@@ -105,7 +98,7 @@ Index: `(user_id, revoked)` — truy vấn nhanh danh sách token còn hiệu l�
 
 Index: `user_id`, `account_number` (unique).
 
-### 1.8 `transactions` (Transaction Service)
+### 1.7 `transactions` (Transaction Service)
 
 | Cột | Kiểu | Ràng buộc | Ghi chú |
 |---|---|---|---|
@@ -125,7 +118,7 @@ Index: `user_id`, `account_number` (unique).
 
 Index: `(from_account_number, created_at)`, `(to_account_number, created_at)` — phục vụ query lịch sử giao dịch nhanh; `idempotency_key` unique để DB tự chặn insert trùng.
 
-### 1.9 `outbox_events` (Transaction Service — Transactional Outbox Pattern)
+### 1.8 `outbox_events` (Transaction Service — Transactional Outbox Pattern)
 
 | Cột | Kiểu | Ràng buộc | Ghi chú |
 |---|---|---|---|
@@ -140,7 +133,7 @@ Index: `(from_account_number, created_at)`, `(to_account_number, created_at)` �
 
 > Bảng này nằm **cùng schema với `transactions`**, để việc ghi `transactions` (status SUCCESS/FAILED) và ghi `outbox_events` xảy ra trong **cùng 1 `@Transactional`** — đây chính là điều kiện tiên quyết để Transactional Outbox Pattern hoạt động đúng. Outbox Publisher (1 scheduled job hoặc Debezium CDC nếu muốn nâng cao) đọc các dòng `published = false`, publish lên Kafka, rồi cập nhật `published = true`.
 
-### 1.10 `notifications` (Notification Service)
+### 1.9 `notifications` (Notification Service)
 
 | Cột | Kiểu | Ràng buộc | Ghi chú |
 |---|---|---|---|
@@ -153,7 +146,7 @@ Index: `(from_account_number, created_at)`, `(to_account_number, created_at)` �
 | `retry_count` | `INT` | DEFAULT 0 | |
 | `created_at` | `TIMESTAMP` | NOT NULL | |
 
-### 1.11 `audit_logs` (dùng chung, ghi từ mọi service qua Kafka event hoặc gọi trực tiếp)
+### 1.10 `audit_logs` (dùng chung, ghi từ mọi service qua Kafka event hoặc gọi trực tiếp)
 
 | Cột | Kiểu | Ràng buộc | Ghi chú |
 |---|---|---|---|
@@ -173,7 +166,7 @@ Index: `(from_account_number, created_at)`, `(to_account_number, created_at)` �
 ## 2. Quan hệ giữa các bảng (tóm tắt)
 
 ```
-users 1───* user_roles *───1 roles 1───* role_permissions *───1 permissions
+users *───1 roles 1───* role_permissions *───1 permissions
 users 1───* refresh_tokens
 users 1───* accounts        (tham chiếu logic, khác database)
 accounts 1───* transactions (qua account_number, không FK cứng cross-service)
@@ -181,16 +174,6 @@ users 1───* notifications
 (mọi service) *───* audit_logs (ghi nhận sự kiện, không có quan hệ FK chặt)
 ```
 
-**Lưu ý quan trọng:** vì mỗi service có database/schema riêng, **không dùng FOREIGN KEY vật lý xuyên service** (ví dụ `accounts.user_id` không FK tới `users.id` vì 2 bảng có thể ở 2 schema/database khác nhau). Chỉ dùng FK cứng cho các bảng **trong cùng 1 service** (`user_roles`, `role_permissions`, `refresh_tokens`).
+**Lưu ý quan trọng:** vì mỗi service có database/schema riêng, **không dùng FOREIGN KEY vật lý xuyên service** (ví dụ `accounts.user_id` không FK tới `users.id` vì 2 bảng có thể ở 2 schema/database khác nhau). Chỉ dùng FK cứng cho các bảng trong cùng 1 service (`users.role_id`, `role_permissions`, `refresh_tokens`)
 
 ---
-
-## 3. Checklist trước khi coi ERD "xong"
-
-- [ ] Mọi bảng có `created_at` (và `updated_at` nếu có thể bị sửa)
-- [ ] Không có FK vật lý xuyên service (chỉ FK trong cùng 1 service/schema)
-- [ ] Trường tiền tệ dùng `DECIMAL(19,4)`, không dùng `FLOAT`/`DOUBLE`
-- [ ] Có index cho các cột hay dùng để query (`account_number`, `user_id`, `created_at` trong transactions)
-- [ ] Có `version` column ở `accounts` cho optimistic lock
-- [ ] Có `idempotency_key` unique ở `transactions`
-- [ ] Export ảnh từ dbdiagram.io → lưu vào `docs/ERD.png`
