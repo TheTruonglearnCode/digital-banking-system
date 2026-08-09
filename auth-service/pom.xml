@@ -82,6 +82,12 @@
             <artifactId>hypersistence-utils-hibernate-63</artifactId>
             <version>3.7.0</version>
         </dependency>
+
+        <dependency>
+            <groupId>org.mapstruct</groupId>
+            <artifactId>mapstruct</artifactId>
+            <version>1.6.3</version>
+        </dependency>
 	</dependencies>
 
 	<build>
