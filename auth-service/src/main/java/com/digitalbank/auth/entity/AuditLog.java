@@ -25,8 +25,8 @@ public class AuditLog {
     @Column(name = "id")
     private Long id;
 
-    @Column(name = "user_id", nullable = false)
-    private Long userId;
+    @Column(name = "actor_id")
+    private Long actorId;
 
     @Column(name = "actor_type", nullable = false)
     private String actorType;
