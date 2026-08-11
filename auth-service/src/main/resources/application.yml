@@ -11,10 +11,15 @@ spring:
   jpa:
     hibernate:
       ddl-auto: update   # KHÔNG dùng update/create trong production-style project, dùng Flyway, tạm thời sử dụng update trong quá trình phát triển
-  data:
-    redis:
-      host: localhost
-      port: 6379
+    defer-datasource-initialization: true
+  sql:
+    init:
+      mode: always
+  # Tạm thời tắt Redis - kích hoạt lại khi cần sử dụng
+  # data:
+  #   redis:
+  #     host: localhost
+  #     port: 6379
 
 jwt:
   #private-key-path: classpath:keys/private_key.pem
