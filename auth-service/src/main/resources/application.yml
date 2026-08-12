@@ -22,7 +22,7 @@ spring:
   #     port: 6379
 
 jwt:
-  #private-key-path: classpath:keys/private_key.pem
-  #public-key-path: classpath:keys/public_key.pem
+  private-key-path: classpath:keys/private_key.pem
+  public-key-path: classpath:keys/public_key.pem
   access-token-expiration: 900000      # 15 phút (ms)
   refresh-token-expiration: 604800000  # 7 ngày (ms)
