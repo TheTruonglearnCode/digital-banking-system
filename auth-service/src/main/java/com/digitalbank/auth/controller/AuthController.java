@@ -1,7 +1,9 @@
 package com.digitalbank.auth.controller;
 
 
+import com.digitalbank.auth.dto.request.LoginRequest;
 import com.digitalbank.auth.dto.request.RegisterRequest;
+import com.digitalbank.auth.dto.response.LoginResponse;
 import com.digitalbank.auth.dto.response.UserResponse;
 import com.digitalbank.auth.service.AuthService;
 import jakarta.validation.Valid;
@@ -22,6 +24,13 @@ public class AuthController {
             @Valid @RequestBody RegisterRequest request) {
         UserResponse response = authService.register(request);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    }
+
+    @PostMapping("/login")
+    public ResponseEntity<LoginResponse> login(
+            @Valid @RequestBody LoginRequest request) {
+        LoginResponse response = authService.login(request);
+        return ResponseEntity.ok(response);
     }
 
 
