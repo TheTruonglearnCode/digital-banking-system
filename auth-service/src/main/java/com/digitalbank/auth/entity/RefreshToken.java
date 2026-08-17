@@ -27,7 +27,7 @@ public class RefreshToken {
     @EqualsAndHashCode.Exclude
     private User user;
 
-    @Column(name = "token", nullable = false, unique = true)
+    @Column(name = "token", nullable = false, unique = true, columnDefinition = "TEXT")
     private String token;
 
     @Column(name = "expires_at", nullable = false)

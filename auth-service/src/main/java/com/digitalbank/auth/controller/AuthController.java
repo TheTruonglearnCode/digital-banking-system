@@ -2,8 +2,10 @@ package com.digitalbank.auth.controller;
 
 
 import com.digitalbank.auth.dto.request.LoginRequest;
+import com.digitalbank.auth.dto.request.RefreshTokenRequest;
 import com.digitalbank.auth.dto.request.RegisterRequest;
 import com.digitalbank.auth.dto.response.LoginResponse;
+import com.digitalbank.auth.dto.response.RefreshTokenResponse;
 import com.digitalbank.auth.dto.response.UserResponse;
 import com.digitalbank.auth.service.AuthService;
 import jakarta.validation.Valid;
@@ -33,5 +35,13 @@ public class AuthController {
         return ResponseEntity.ok(response);
     }
 
+    @PostMapping("/refresh-token")
+    public ResponseEntity<RefreshTokenResponse> refreshToken(@Valid @RequestBody RefreshTokenRequest request) {
+        return ResponseEntity.ok(
+                authService.refreshToken(
+                        request.getRefreshToken()
+                )
+        );
+    }
 
 }

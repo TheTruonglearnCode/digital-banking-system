@@ -12,6 +12,9 @@ logs/
 # Environment
 .env
 
+# JWT Keys
+*.pem
+
 # OS
 .DS_Store
 Thumbs.db
