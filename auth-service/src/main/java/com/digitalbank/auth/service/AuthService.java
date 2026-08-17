@@ -4,12 +4,15 @@ package com.digitalbank.auth.service;
 import com.digitalbank.auth.dto.request.LoginRequest;
 import com.digitalbank.auth.dto.request.RegisterRequest;
 import com.digitalbank.auth.dto.response.LoginResponse;
+import com.digitalbank.auth.dto.response.RefreshTokenResponse;
 import com.digitalbank.auth.dto.response.UserResponse;
+import com.digitalbank.auth.entity.RefreshToken;
 import com.digitalbank.auth.entity.Role;
 import com.digitalbank.auth.entity.User;
 import com.digitalbank.auth.enums.UserStatus;
 import com.digitalbank.auth.exception.*;
 import com.digitalbank.auth.mapper.UserMapper;
+import com.digitalbank.auth.repository.RefreshTokenRepository;
 import com.digitalbank.auth.repository.RoleRepository;
 import com.digitalbank.auth.repository.UserRepository;
 import com.digitalbank.auth.security.JwtService;
@@ -17,6 +20,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 
@@ -26,6 +30,7 @@ public class AuthService {
 
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
+    private final RefreshTokenRepository refreshTokenRepository;
     private final PasswordEncoder passwordEncoder;
     private final UserMapper userMapper;
     private final JwtService jwtService;
@@ -60,6 +65,7 @@ public class AuthService {
         return userMapper.toResponse(user);
     }
 
+    @Transactional
     public LoginResponse login(LoginRequest request) {
         User user = userRepository.findByEmail(request.getEmail())
                 .orElseThrow(() -> new InvalidCredentialsException("Invalid email or password"));
@@ -68,10 +74,12 @@ public class AuthService {
             throw new AccountLockedException("Account is locked. Try again after " + user.getLockedUntil());
         }
 
+        boolean needSave = false;
+
         if (user.getLockedUntil() != null && user.getLockedUntil().isBefore(LocalDateTime.now())) {
             user.setFailedLoginAttempts(0);
             user.setLockedUntil(null);
-            userRepository.save(user);
+            needSave = true;
         }
 
         if (user.getStatus() != UserStatus.ACTIVE) {
@@ -87,16 +95,96 @@ public class AuthService {
             throw new InvalidCredentialsException("Invalid email or password");
         }
 
-        user.setFailedLoginAttempts(0);
-        user.setLockedUntil(null);
-        userRepository.save(user);
+        if (needSave || user.getFailedLoginAttempts() > 0) {
+            user.setFailedLoginAttempts(0);
+            user.setLockedUntil(null);
+            userRepository.save(user);
+        }
 
         String accessToken = jwtService.generateAccessToken(user);
         String refreshToken = jwtService.generateRefreshToken(user);
 
+        RefreshToken refreshTokenEntity = RefreshToken.builder()
+                .user(user)
+                .token(refreshToken)
+                .expiresAt(LocalDateTime.now().plusSeconds(jwtService.getRefreshTokenExpiration() / 1000))
+                .revoked(false)
+                .build();
+
+        refreshTokenRepository.save(refreshTokenEntity);
+
         return LoginResponse.builder()
                 .accessToken(accessToken)
                 .refreshToken(refreshToken)
+                .tokenType("Bearer")
+                .expiresIn(accessTokenExpiration)
+                .build();
+    }
+
+    @Transactional
+    public RefreshTokenResponse refreshToken(String token) {
+
+        RefreshToken refreshToken = refreshTokenRepository
+                .findByToken(token)
+                .orElseThrow(() ->
+                        new InvalidRefreshTokenException(
+                                "Invalid refresh token"
+                        )
+                );
+
+        if (refreshToken.isRevoked()) {
+            throw new InvalidRefreshTokenException(
+                    "Refresh token has been revoked"
+            );
+        }
+
+        if (refreshToken.getExpiresAt()
+                .isBefore(LocalDateTime.now())) {
+
+            throw new InvalidRefreshTokenException(
+                    "Refresh token has expired"
+            );
+        }
+
+        User user = refreshToken.getUser();
+
+        if (user.getStatus() != UserStatus.ACTIVE) {
+            throw new AccountNotActiveException(
+                    "Account is not active"
+            );
+        }
+
+        // Revoke token cũ
+        refreshToken.setRevoked(true);
+        refreshTokenRepository.save(refreshToken);
+
+        // Tạo token mới
+        String newAccessToken =
+                jwtService.generateAccessToken(user);
+
+        String newRefreshToken =
+                jwtService.generateRefreshToken(user);
+
+        // Lưu refresh token mới
+        RefreshToken newRefreshTokenEntity =
+                RefreshToken.builder()
+                        .user(user)
+                        .token(newRefreshToken)
+                        .expiresAt(
+                                LocalDateTime.now()
+                                        .plusSeconds(
+                                                jwtService
+                                                        .getRefreshTokenExpiration() / 1000
+                                        )
+                        )
+                        .revoked(false)
+                        .build();
+
+        refreshTokenRepository.save(newRefreshTokenEntity);
+
+        return RefreshTokenResponse.builder()
+                .accessToken(newAccessToken)
+                .refreshToken(newRefreshToken)
                 .tokenType("Bearer")
                 .expiresIn(accessTokenExpiration)
                 .build();
