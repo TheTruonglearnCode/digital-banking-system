@@ -41,6 +41,7 @@ public class AuthService {
     private static final int MAX_FAILED_ATTEMPTS = 5;
     private static final int LOCK_TIME_MINUTES = 15;
 
+    @Transactional
     public UserResponse register(RegisterRequest request) {
         if (userRepository.existsByEmail(request.getEmail())) {
             throw new EmailAlreadyExistsException(request.getEmail());
@@ -61,7 +62,18 @@ public class AuthService {
                 .role(role)
                 .build();
 
-        userRepository.save(user);
+        try {
+            userRepository.save(user);
+        } catch (org.springframework.dao.DataIntegrityViolationException ex) {
+            if (userRepository.existsByEmail(request.getEmail())) {
+                throw new EmailAlreadyExistsException(request.getEmail());
+            }
+            if (userRepository.existsByPhoneNumber(request.getPhoneNumber())) {
+                throw new PhoneNumberAlreadyExistsException(request.getPhoneNumber());
+            }
+            throw ex;
+        }
+
         return userMapper.toResponse(user);
     }
 
@@ -83,6 +95,9 @@ public class AuthService {
         }
 
         if (user.getStatus() != UserStatus.ACTIVE) {
+            if (needSave) {
+                userRepository.save(user);
+            }
             throw new AccountNotActiveException("Account is not active. Current status: " + user.getStatus());
         }
 
@@ -190,4 +205,22 @@ public class AuthService {
                 .build();
     }
 
+    @Transactional
+    public void logout(String token) {
+
+        RefreshToken refreshToken = refreshTokenRepository
+                .findByToken(token)
+                .orElseThrow(() ->
+                        new InvalidRefreshTokenException(
+                                "Invalid refresh token"
+                        )
+                );
+
+        if (refreshToken.isRevoked()) {
+            return;
+        }
+
+        refreshToken.setRevoked(true);
+        refreshTokenRepository.save(refreshToken);
+    }
 }
